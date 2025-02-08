@@ -15,11 +15,11 @@ You can include SimpleTest into your project in two ways:
 1. **Add as a Project Reference:**
 
    - Download or clone the SimpleTest repository.
-   - Add a reference to `SimpleTest.csproj` in your main project.
+   - Add a reference to `SimpleTest/SimpleTest.csproj` in your main project.
 
 2. **Include the Source File:**
 
-   - Copy the `lib/SimpleTest.cs` file into your project directory.
+   - Copy the `SimpleTest/SimpleTest.cs` file into your project directory.
 
 ## Usage
 
