@@ -1,9 +1,16 @@
-using Qwaitumin.SimpleTest;
+namespace Qwaitumin.SimpleTest.Tests;
 
-namespace Qwaitumin.SimpleTestTest;
+public static class Program
+{
+  static void Main()
+  {
+    if (!new SimpleTestPrinter(Console.WriteLine).Run())
+      Environment.Exit(1);
+  }
+}
 
 [SimpleTestClass]
-public class ExampleTest
+public class Tests
 {
   [SimpleBeforeAll]
   public void BeforeAll()
@@ -30,12 +37,11 @@ public class ExampleTest
   }
 
   [SimpleTestMethod]
-  public void TestThatShouldPass1()
+  public void AssertionTestsPass()
   {
     Assertions.AssertEqual(0, 0);
     Assertions.AssertEqual("a", "a");
     Assertions.AssertNotEqual("a1", "a");
-    Assertions.AssertFileExists("resources/dummy");
     Assertions.AssertMoreThan(1, 0);
     Assertions.AssertEqualOrMoreThan(0, 0);
     Assertions.AssertEqualOrMoreThan(1, 0);
@@ -44,6 +50,7 @@ public class ExampleTest
     Assertions.AssertEqualOrLessThan(0, 1);
     Assertions.AssertInRange(0, -1, 1);
     Assertions.AssertNotInRange(2, -1, 1);
+
     int? amINull = null;
     Assertions.AssertNull(amINull);
     amINull = 1;
@@ -51,7 +58,30 @@ public class ExampleTest
   }
 
   [SimpleTestMethod]
-  public void TestThatShouldPass2()
+  public void AssertionTestsFail()
+  {
+    Assertions.AssertEqual(0, 1);
+  }
+
+  [SimpleTestMethod]
+  public void FileAssertionTestsPass()
+  {
+    using SimpleTestDirectory testDirectory = new();
+    var filePath = testDirectory.GetRelativePath("dummy-file");
+    File.Create(filePath); // Test directory cleans all files created in it
+    Assertions.AssertFileExists(filePath);
+  }
+
+  [SimpleTestMethod]
+  public void FileAssertionTestsFail()
+  {
+    using SimpleTestDirectory testDirectory = new();
+    var filePath = testDirectory.GetRelativePath("dummy-file");
+    Assertions.AssertFileExists(filePath);
+  }
+
+  [SimpleTestMethod]
+  public void LambdaAssertionPass()
   {
     Assertions.AssertThrows<DivideByZeroException>(() =>
     {
@@ -63,20 +93,8 @@ public class ExampleTest
   }
 
   [SimpleTestMethod]
-  public void TestThatShouldFail1()
+  public void LambdaAssertionPassFail1()
   {
     Assertions.AssertAwaitAtMost(50, () => throw new ArgumentException("Example endless exception."));
-  }
-
-  [SimpleTestMethod]
-  public void TestThatShouldFail2()
-  {
-    Assertions.AssertEqual(0, 1);
-  }
-
-  [SimpleTestMethod]
-  public void TestThatShouldFail3()
-  {
-    Assertions.AssertInRange(0, 1, 2);
   }
 }

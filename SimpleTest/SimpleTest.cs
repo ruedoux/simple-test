@@ -156,8 +156,7 @@ public class SimpleTestRunner(
 // Example test runner implementation
 public partial class SimpleTestPrinter(
   Action<string> printFunction,
-  bool parseException = true,
-  int exceptionLineCut = 3)
+  bool parseException = true)
 {
   static class Ansi
   {
@@ -186,7 +185,6 @@ public partial class SimpleTestPrinter(
   static readonly string PREFIX_RUN = "[RUN]";
   static readonly string PREFIX_OK = "[OK ]";
   static readonly string PREFIX_ERROR = "[ERR]";
-  static readonly char[] separator = ['\r', '\n'];
 
   public bool Run()
   {
@@ -251,11 +249,8 @@ public partial class SimpleTestPrinter(
   private static string AddColorToString(string msg, string color)
     => $"{color}{msg}{Ansi.NORMAL}";
 
-  private string ParseException(string exceptionText)
+  private static string ParseException(string exceptionText)
   {
-    string[] lines = exceptionText.Split(separator, StringSplitOptions.RemoveEmptyEntries);
-    exceptionText = string.Join(Environment.NewLine, lines.Length >= exceptionLineCut ? lines[..exceptionLineCut] : lines);
-
     exceptionText = RegexHandler.ExceptionDot().Replace(exceptionText, ".");
     exceptionText = RegexHandler.ExceptionRegexParentheses().Replace(exceptionText, "()");
     exceptionText = RegexHandler.ExceptionRegexParenthesesOpen().Replace(exceptionText, "(");
