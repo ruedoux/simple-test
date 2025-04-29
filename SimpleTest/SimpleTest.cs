@@ -186,13 +186,26 @@ public partial class SimpleTestPrinter(
   static readonly string PREFIX_OK = "[OK ]";
   static readonly string PREFIX_ERROR = "[ERR]";
 
-  public bool Run()
+  public bool RunAll()
   {
     SimpleTestRunner simpleTestRunner = new(LogClassBegin, LogMethodResult, LogClassResult);
     Stopwatch stopwatch = Stopwatch.StartNew();
     simpleTestRunner.RunAll();
     stopwatch.Stop();
+    return SummarizeResults(simpleTestRunner, stopwatch);
+  }
 
+  public bool RunForType(Type type)
+  {
+    SimpleTestRunner simpleTestRunner = new(LogClassBegin, LogMethodResult, LogClassResult);
+    Stopwatch stopwatch = Stopwatch.StartNew();
+    simpleTestRunner.RunForType(type);
+    stopwatch.Stop();
+    return SummarizeResults(simpleTestRunner, stopwatch);
+  }
+
+  private bool SummarizeResults(SimpleTestRunner simpleTestRunner, Stopwatch stopwatch)
+  {
     int classesPassed = 0, classesTotal = 0, methodsPassed = 0, methodsTotal = 0;
     foreach (var classResult in simpleTestRunner.ClassResults)
     {
@@ -236,9 +249,16 @@ public partial class SimpleTestPrinter(
     if (methodResult.Result == Result.FAIL)
     {
       printFunction($"-> {AddColorToString(PREFIX_ERROR, Ansi.RED)} {methodResult.Name}");
-      string exceptionMessage = parseException ?
-        ParseException(string.Join('\n', methodResult.Messages)) :
+
+      string exceptionMessage = "<empty message>";
+      if (methodResult.Messages.Length > 0)
+      {
+        exceptionMessage = parseException ?
+        ParseException(string.Join('\n', methodResult.Messages.Skip(1))) :
         string.Join('\n', methodResult.Messages);
+        exceptionMessage = methodResult.Messages[0] + '\n' + exceptionMessage;
+      }
+
       printFunction(exceptionMessage);
     }
   }
