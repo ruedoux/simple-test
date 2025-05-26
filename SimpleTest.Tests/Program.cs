@@ -6,8 +6,8 @@ public static class Program
   {
     new SimpleTestPrinter(Console.WriteLine).Run(); // This should run everything
     Console.WriteLine("****");
-    new SimpleTestPrinter(Console.WriteLine).Run(["--test-class", "Tests2"]); // This should only run "Tests" class
+    new SimpleTestPrinter(Console.WriteLine).Run(["--test-class", "Tests2"]); // This should only run "Tests2" class
     Console.WriteLine("****");
-    new SimpleTestPrinter(Console.WriteLine).Run(["--test-class", "Tests2", "--test-method", "LambdaAssertionPass"]); // This should only run "Tests" a single method
+    new SimpleTestPrinter(Console.WriteLine).Run(["--test-class", "Tests2", "--test-method", "LambdaAssertionPass"]); // This should only run "LambdaAssertionPass" method in "Tests2" class
   }
 }
