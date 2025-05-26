@@ -26,9 +26,82 @@ public class SimpleBeforeAll : Attribute { }
 [AttributeUsage(AttributeTargets.Method)]
 public class SimpleAfterAll : Attribute { }
 
+public class ArgumentParser
+{
+  record ArgumentDefinition(
+    string Argument, string AlternativeArgument, string Description, bool IsMandatory);
 
-public record SimpleTestMethodResult(string Name, Result Result, string[] Messages);
+  public Action<string> Writer = Console.WriteLine;
+  private readonly Dictionary<string, string?> parsedArguments = [];
+  private readonly Dictionary<string, ArgumentDefinition> allowedArguments = [];
+  private readonly Dictionary<string, ArgumentDefinition> alternativeAllowedArguments = [];
 
+  public void ShowHelp()
+  {
+    Writer("Usage:");
+    foreach (var def in allowedArguments.Values)
+    {
+      var left = def.Argument;
+      if (!string.IsNullOrEmpty(def.AlternativeArgument))
+        left += ", " + def.AlternativeArgument;
+      Writer($"  {left,-20}  {def.Description}");
+    }
+  }
+
+  public void AddAllowedArgument(
+    string argument,
+    string alternativeArgument = "",
+    string description = "",
+    bool isMandatory = false)
+  {
+    ArgumentDefinition argumentDefinition = new(
+      Argument: argument,
+      AlternativeArgument: alternativeArgument,
+      Description: description,
+      IsMandatory: isMandatory);
+
+    allowedArguments[argument] = argumentDefinition;
+    alternativeAllowedArguments[alternativeArgument] = argumentDefinition;
+  }
+
+  public void ParseArguments(string[] args)
+  {
+
+    for (int i = 0; i < args.Length; i++)
+    {
+      var token = args[i];
+
+      if (token.StartsWith("--") || token.StartsWith('-'))
+        if (!(allowedArguments.ContainsKey(token) || alternativeAllowedArguments.ContainsKey(token)))
+          throw new ArgumentException($"Unknown argument name: {token}");
+
+      if (i + 1 < args.Length && !args[i + 1].StartsWith("--") && !args[i + 1].StartsWith('-'))
+        parsedArguments[token] = args[i++ + 1];
+      else
+        parsedArguments[token] = null;
+    }
+  }
+
+  public string? GetArgument(string argument, string altArgument = "")
+  {
+    if (allowedArguments.ContainsKey(argument))
+      if (parsedArguments.TryGetValue(argument, out var value))
+        return value;
+    if (alternativeAllowedArguments.ContainsKey(altArgument))
+      if (parsedArguments.TryGetValue(altArgument, out var value))
+        return value;
+    return null;
+  }
+
+  public string[] GetParsedArguments()
+    => [.. parsedArguments.Keys];
+}
+
+public record SimpleTestMethodResult(
+  string Name,
+  Result Result,
+  string[] Messages,
+  long TookMiliseconds);
 public record SimpleTestClassResult(
   string Name,
   Result Result,
@@ -41,93 +114,130 @@ public record SimpleTestClassResult(
 #pragma warning disable IL2067
 #pragma warning disable IL2026
 #pragma warning disable IL2070
-public class SimpleTestRunner(
+public class SimpleTestExecutor(
   Action<Type>? beginClassPrinter = null,
   Action<SimpleTestMethodResult>? methodResultPrinter = null,
   Action<SimpleTestClassResult>? endClassPerinter = null)
 {
-  public List<SimpleTestClassResult> ClassResults = [];
-
   private readonly Action<Type>? beginClassPrinter = beginClassPrinter;
   private readonly Action<SimpleTestMethodResult>? methodResultPrinter = methodResultPrinter;
   private readonly Action<SimpleTestClassResult>? endClassPerinter = endClassPerinter;
 
-  public void RunAll()
+  public SimpleTestClassResult[] RunAll()
   {
-    var testTypes = GetTestAllClassTypes();
+    var testTypes = GetAllTestClassTypes();
+    List<SimpleTestClassResult> simpleTestClassResults = [];
 
     foreach (var testType in testTypes)
-      RunForType(testType);
+      simpleTestClassResults.Add(RunClass(testType));
+
+    return [.. simpleTestClassResults];
   }
 
-  public SimpleTestClassResult RunForType(Type testClassType)
+  public SimpleTestClassResult RunClass(string name)
+  {
+    var type = GetTestClassTypeWithName(name)
+      ?? throw new ArgumentException($"There is no defined test class: {name}");
+    return RunClass(type);
+  }
+
+  public SimpleTestClassResult RunClass(Type testClassType, MethodInfo[]? methodsOverwrite = null)
   {
     if (!testClassType.IsDefined(typeof(SimpleTestClass), true))
       throw new ArgumentException($"Class '{testClassType.Name}' does not have the '{nameof(SimpleTestClass)}' attribute.");
 
-    beginClassPrinter?.Invoke(testClassType);
+    var objectTestClass = Activator.CreateInstance(testClassType)
+      ?? throw new Exception($"Activated class is null: '{testClassType.Name}'");
 
-    var testObject = Activator.CreateInstance(testClassType);
     var beforeAllMethod = GetMethodWithAttribute<SimpleBeforeAll>(testClassType);
     var afterAllMethod = GetMethodWithAttribute<SimpleAfterAll>(testClassType);
     var beforeEachMethod = GetMethodWithAttribute<SimpleBeforeEach>(testClassType);
     var afterEachMethod = GetMethodWithAttribute<SimpleAfterEach>(testClassType);
-    var testMethods = GetMethodsWithAttribute<SimpleTestMethod>(testClassType);
+
+    var testMethods = methodsOverwrite is null
+      ? GetMethodsWithAttribute<SimpleTestMethod>(testClassType) : methodsOverwrite;
 
     List<SimpleTestMethodResult> methodResults = [];
-    Stopwatch classStopwatch = Stopwatch.StartNew();
+    Result result = Result.SUCCESS;
+    string[] messages = [];
 
-    Result classResult = Result.SUCCESS;
-    string[] classMessages = [];
+    Stopwatch classStopwatch = Stopwatch.StartNew();
+    beginClassPrinter?.Invoke(testClassType);
+
     try
     {
-      beforeAllMethod?.Invoke(testObject, null);
+      beforeAllMethod?.Invoke(objectTestClass, null);
 
       foreach (var testMethod in testMethods)
-      {
-        beforeEachMethod?.Invoke(testObject, null);
+        methodResults.Add(RunMethod(
+          simpleTestClass: objectTestClass,
+          testMethod: testMethod,
+          beforeEachMethod: beforeEachMethod,
+          afterEachMethod: beforeEachMethod));
 
-        Result methodResult = Result.SUCCESS;
-        string[] methodMessages = [];
-        try
-        {
-          testMethod.Invoke(testObject, null);
-        }
-        catch (Exception ex)
-        {
-          methodResult = Result.FAIL;
-          ex = ex.InnerException ?? ex; // Need only inner exception (for clarity)
-          methodMessages = ConvertExceptionToStringArray(ex);
-        }
-
-        SimpleTestMethodResult testMethodResult = new(
-          testMethod.Name, methodResult, methodMessages);
-        methodResults.Add(testMethodResult);
-        methodResultPrinter?.Invoke(testMethodResult);
-
-        afterEachMethod?.Invoke(testObject, null);
-      }
-
-      afterAllMethod?.Invoke(testObject, null);
+      afterAllMethod?.Invoke(objectTestClass, null);
     }
     catch (Exception ex)
     {
-      classResult = Result.FAIL;
-      classMessages = ConvertExceptionToStringArray(ex);
+      result = Result.FAIL;
+      messages = ConvertExceptionToStringArray(ex);
     }
+
     classStopwatch.Stop();
+    result = methodResults.Exists(mr => mr.Result == Result.FAIL)
+      ? Result.FAIL : Result.SUCCESS;
+    messages = messages.Length != 0
+      ? messages : ["At least one of the methods has failed"];
+    var simpleTestClassResult = new SimpleTestClassResult(
+      Name: testClassType.Name,
+      Result: result,
+      MethodResults: methodResults,
+      TookMiliseconds: classStopwatch.ElapsedMilliseconds,
+      Messages: messages);
 
-    classResult = methodResults.Exists(mr => mr.Result == Result.FAIL) ? Result.FAIL : Result.SUCCESS;
-    classMessages = classMessages.Length != 0 ? classMessages : ["At least one of the methods has failed"];
-    var simpleTestClassResult = new SimpleTestClassResult(testClassType.Name, classResult, methodResults, classStopwatch.ElapsedMilliseconds, classMessages);
-
-    ClassResults.Add(simpleTestClassResult);
     endClassPerinter?.Invoke(simpleTestClassResult);
 
     return simpleTestClassResult;
   }
 
-  public static Type[] GetTestAllClassTypes()
+  public SimpleTestClassResult RunMethod(string className, string methodName)
+  {
+    var type = GetTestClassTypeWithName(className)
+      ?? throw new ArgumentException($"There is no defined test class: {className}");
+    var methodInfo = GetMethodWithName(type, methodName)
+      ?? throw new ArgumentException($"There is no defined test method: '{methodName}', in class: '{className}'");
+    return RunClass(type, [methodInfo]);
+  }
+
+  public SimpleTestMethodResult RunMethod(
+    object simpleTestClass,
+    MethodInfo testMethod,
+    MethodInfo? beforeEachMethod = null,
+    MethodInfo? afterEachMethod = null)
+  {
+    Stopwatch methodStopwatch = Stopwatch.StartNew();
+    beforeEachMethod?.Invoke(simpleTestClass, null);
+
+    Result methodResult = Result.SUCCESS;
+    string[] methodMessages = [];
+    try { testMethod.Invoke(simpleTestClass, null); }
+    catch (Exception ex)
+    {
+      methodResult = Result.FAIL;
+      ex = ex.InnerException ?? ex; // Need only inner exception (for clarity)
+      methodMessages = ConvertExceptionToStringArray(ex);
+    }
+
+    methodStopwatch.Stop();
+    SimpleTestMethodResult simpleTestMethodResult = new(
+      testMethod.Name, methodResult, methodMessages, methodStopwatch.ElapsedMilliseconds);
+    methodResultPrinter?.Invoke(simpleTestMethodResult);
+    afterEachMethod?.Invoke(simpleTestClass, null);
+
+    return simpleTestMethodResult;
+  }
+
+  public static Type[] GetAllTestClassTypes()
   {
     var allAssemblies = AppDomain.CurrentDomain.GetAssemblies();
     List<Type> types = [];
@@ -138,8 +248,14 @@ public class SimpleTestRunner(
     return [.. types];
   }
 
+  public static Type? GetTestClassTypeWithName(string name)
+    => Array.Find(GetAllTestClassTypes(), classType => classType.Name == name);
+
   private static MethodInfo? GetMethodWithAttribute<T>(Type type) where T : Attribute
     => Array.Find(type.GetMethods(), m => m.GetCustomAttributes(typeof(T), true).Length > 0);
+
+  private static MethodInfo? GetMethodWithName(Type type, string name)
+    => Array.Find(type.GetMethods(), m => m.Name == name);
 
   private static MethodInfo[] GetMethodsWithAttribute<T>(Type type) where T : Attribute
     => type.GetMethods()
@@ -153,10 +269,52 @@ public class SimpleTestRunner(
 #pragma warning restore IL2026
 #pragma warning restore IL2070
 
+public class SimpleTestRunner
+{
+  private readonly ArgumentParser argumentParser = new();
+  private readonly SimpleTestExecutor simpleTestExecutor;
+
+  private readonly List<SimpleTestClassResult> classResults = [];
+  public SimpleTestClassResult[] ClassResults => [.. classResults];
+
+  public SimpleTestRunner(SimpleTestExecutor simpleTestExecutor, string[]? args = null)
+  {
+    this.simpleTestExecutor = simpleTestExecutor;
+    if (args is null) return;
+
+    argumentParser.AddAllowedArgument(
+      argument: "--help",
+      alternativeArgument: "-h",
+      description: "Show help");
+    argumentParser.AddAllowedArgument(
+      argument: "--test-class",
+      alternativeArgument: "-c",
+      description: "Name of the class to test");
+    argumentParser.AddAllowedArgument(
+      argument: "--test-method",
+      alternativeArgument: "-m",
+      description: "Name of the method to test");
+    argumentParser.ParseArguments(args);
+  }
+
+  public void Run()
+  {
+    var testClassName = argumentParser.GetArgument("--test-class");
+    var testMethodName = argumentParser.GetArgument("--test-method");
+
+    if (argumentParser.GetParsedArguments().Length == 0)
+      classResults.AddRange(simpleTestExecutor.RunAll());
+    else if (testClassName is not null && testMethodName is null)
+      classResults.Add(simpleTestExecutor.RunClass(testClassName));
+    else if (testClassName is not null && testMethodName is not null)
+      classResults.Add(simpleTestExecutor.RunMethod(testClassName, testMethodName));
+    else
+      argumentParser.ShowHelp();
+  }
+}
+
 // Example test runner implementation
-public partial class SimpleTestPrinter(
-  Action<string> printFunction,
-  bool parseException = true)
+public partial class SimpleTestPrinter
 {
   static class Ansi
   {
@@ -186,20 +344,23 @@ public partial class SimpleTestPrinter(
   static readonly string PREFIX_OK = "[OK ]";
   static readonly string PREFIX_ERROR = "[ERR]";
 
-  public bool RunAll()
+  private readonly SimpleTestExecutor simpleTestExecutor;
+  private readonly Action<string> printFunction;
+  private readonly bool parseException;
+
+
+  public SimpleTestPrinter(Action<string> printFunction, bool parseException = true)
   {
-    SimpleTestRunner simpleTestRunner = new(LogClassBegin, LogMethodResult, LogClassResult);
-    Stopwatch stopwatch = Stopwatch.StartNew();
-    simpleTestRunner.RunAll();
-    stopwatch.Stop();
-    return SummarizeResults(simpleTestRunner, stopwatch);
+    this.printFunction = printFunction;
+    this.parseException = parseException;
+    simpleTestExecutor = new(LogClassBegin, LogMethodResult, LogClassResult);
   }
 
-  public bool RunForType(Type type)
+  public bool Run(string[]? args = null)
   {
-    SimpleTestRunner simpleTestRunner = new(LogClassBegin, LogMethodResult, LogClassResult);
+    SimpleTestRunner simpleTestRunner = new(simpleTestExecutor, args);
     Stopwatch stopwatch = Stopwatch.StartNew();
-    simpleTestRunner.RunForType(type);
+    simpleTestRunner.Run();
     stopwatch.Stop();
     return SummarizeResults(simpleTestRunner, stopwatch);
   }
