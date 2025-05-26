@@ -45,7 +45,7 @@ To use SimpleTest, follow these steps:
 
 2. **Run Your Tests:**
 
-   - Instantiate and run your test classes to execute the tests. For example:
+   - Instantiate and run your test classes. For example:
 
    ```csharp
    class Program
@@ -57,3 +57,9 @@ To use SimpleTest, follow these steps:
       }
    }
    ```
+
+
+You can specify which class and method to run (by default it runs everything). For example:
+- `dotnet run` - will run all test classes
+- `dotnet run --test-class ExampleTest` - will run only `ExampleTest` class
+- `dotnet run --test-class ExampleTest --test-method TestMethod` - will run only `TestMethod` method in `ExampleTest` class
