@@ -184,8 +184,9 @@ public class SimpleTestExecutor(
     }
 
     classStopwatch.Stop();
-    result = methodResults.Exists(mr => mr.Result == Result.FAIL)
-      ? Result.FAIL : Result.SUCCESS;
+    if (result is not Result.FAIL)
+      result = methodResults.Exists(mr => mr.Result == Result.FAIL)
+        ? Result.FAIL : Result.SUCCESS;
     messages = messages.Length != 0
       ? messages : ["At least one of the methods has failed"];
     var simpleTestClassResult = new SimpleTestClassResult(
