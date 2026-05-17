@@ -13,12 +13,10 @@ SimpleTest is a lightweight, one-file-only test library for C#. It allows you to
 You can include SimpleTest into your project in two ways:
 
 1. **Add as a Project Reference:**
-
    - Download or clone the SimpleTest repository.
    - Add a reference to `SimpleTest/SimpleTest.csproj` in your main project.
 
 2. **Include the Source File:**
-
    - Copy the `SimpleTest/SimpleTest.cs` file into your project directory.
 
 ## Usage
@@ -26,16 +24,15 @@ You can include SimpleTest into your project in two ways:
 To use SimpleTest, follow these steps:
 
 1. **Define Test Classes and Methods:**
-
    - Create your test classes and annotate test methods. For example:
 
    ```csharp
    using Qwaitumin.SimpleTest;
 
-   [SimpleTestClass]
+   [TestClass]
    public class ExampleTest
    {
-    [SimpleTest]
+    [TestMethod]
     public void TestMethod()
     {
       // Your test code here
@@ -43,8 +40,24 @@ To use SimpleTest, follow these steps:
    }
    ```
 
-2. **Run Your Tests:**
+   To run one test method multiple times with different primitive values, add a single parameter and decorate it with `TestMethodArguments`:
 
+   ```csharp
+   [TestClass]
+   public class ExampleParameterizedTest
+   {
+     [TestMethod]
+     [TestMethodArguments(1, 2, 3)]
+     public void RetriesWithDifferentCounts(int count)
+     {
+       Assertions.AssertMoreThan(count, 0);
+     }
+   }
+   ```
+
+   Each value is executed as a separate method invocation, so the output will include entries like `RetriesWithDifferentCounts(1)`.
+
+2. **Run Your Tests:**
    - Instantiate and run your test classes. For example:
 
    ```csharp
@@ -58,8 +71,8 @@ To use SimpleTest, follow these steps:
    }
    ```
 
-
 You can specify which class and method to run (by default it runs everything). For example:
+
 - `dotnet run` - will run all test classes
 - `dotnet run --test-class ExampleTest` - will run only `ExampleTest` class
 - `dotnet run --test-class ExampleTest --test-method TestMethod` - will run only `TestMethod` method in `ExampleTest` class

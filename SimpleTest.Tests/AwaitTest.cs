@@ -1,9 +1,9 @@
 namespace Qwaitumin.SimpleTest.Tests;
 
-[SimpleTestClass]
-public class Tests2
+[TestClass]
+public class AwaitTest
 {
-  [SimpleTestMethod]
+  [TestMethod]
   public void LambdaAssertionPass()
   {
     Assertions.AssertThrows<DivideByZeroException>(() =>
@@ -15,7 +15,7 @@ public class Tests2
     Assertions.AssertAwaitAtMost(1000, () => Thread.Sleep(10));
   }
 
-  [SimpleTestMethod]
+  [TestMethod]
   public void LambdaAssertionPassFail1()
   {
     Assertions.AssertAwaitAtMost(50, () => throw new ArgumentException("Example endless exception."));

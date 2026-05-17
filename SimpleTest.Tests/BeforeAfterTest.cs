@@ -1,33 +1,33 @@
 namespace Qwaitumin.SimpleTest.Tests;
 
-[SimpleTestClass]
-public class Tests
+[TestClass]
+public class BeforeAfterTest
 {
-  [SimpleBeforeAll]
+  [BeforeAll]
   public void BeforeAll()
   {
     Console.WriteLine("[SimpleBeforeAll] runs before all methods in a class!");
   }
 
-  [SimpleBeforeEach]
+  [BeforeEach]
   public void BeforeEachMethod()
   {
     Console.WriteLine("[SimpleBeforeEach] runs before each method in a class!");
   }
 
-  [SimpleAfterAll]
+  [AfterAll]
   public void AfterAll()
   {
     Console.WriteLine("[SimpleAfterAll] runs after all methods in a class!");
   }
 
-  [SimpleAfterEach]
+  [AfterEach]
   public void AfterEachMethod()
   {
     Console.WriteLine("[SimpleAfterEach] runs after each method in a class!");
   }
 
-  [SimpleTestMethod]
+  [TestMethod]
   public void AssertionTestsPass()
   {
     Assertions.AssertEqual(0, 0);
@@ -48,13 +48,13 @@ public class Tests
     Assertions.AssertNotNull(amINull);
   }
 
-  [SimpleTestMethod]
+  [TestMethod]
   public void AssertionTestsFail()
   {
     Assertions.AssertEqual(0, 1);
   }
 
-  [SimpleTestMethod]
+  [TestMethod]
   public void FileAssertionTestsPass()
   {
     using SimpleTestDirectory testDirectory = new();
@@ -63,7 +63,7 @@ public class Tests
     Assertions.AssertFileExists(filePath);
   }
 
-  [SimpleTestMethod]
+  [TestMethod]
   public void FileAssertionTestsFail()
   {
     using SimpleTestDirectory testDirectory = new();
