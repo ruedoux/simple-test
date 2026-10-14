@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using System.Runtime.CompilerServices;
 
-namespace Qwaitumin.SimpleTest;
+namespace SimpleTest;
 
 public enum Result { Success, Fail, Error }
 

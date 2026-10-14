@@ -27,7 +27,7 @@ To use SimpleTest, follow these steps:
    - Create your test classes and annotate test methods. For example:
 
    ```csharp
-   using Qwaitumin.SimpleTest;
+   using SimpleTest;
 
    [TestClass]
    public class ExampleTest

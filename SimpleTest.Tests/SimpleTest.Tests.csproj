@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\SimpleTest\Qwaitumin.SimpleTest.csproj" />
+    <ProjectReference Include="..\SimpleTest\SimpleTest.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

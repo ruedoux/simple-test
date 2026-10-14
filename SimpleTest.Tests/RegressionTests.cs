@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Qwaitumin.SimpleTest.Tests;
+namespace SimpleTest.Tests;
 
 [TestClass]
 public class RegressionTests

@@ -1,4 +1,4 @@
-namespace Qwaitumin.SimpleTest.Tests;
+namespace SimpleTest.Tests;
 
 [TestClass]
 public class AwaitTest

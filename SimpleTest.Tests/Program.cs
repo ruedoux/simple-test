@@ -1,4 +1,4 @@
-namespace Qwaitumin.SimpleTest.Tests;
+namespace SimpleTest.Tests;
 
 public static class Program
 {
